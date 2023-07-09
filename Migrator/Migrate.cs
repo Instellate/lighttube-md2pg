@@ -23,6 +23,7 @@ public static class Migrate
         await MigratePlaylistCache(db, playlistColl);
         await MigrateChannels(db, channelCacheColl);
         await MigrateOAuthTokens(db, oauth2TokensColl);
+        await db.SaveChangesAsync();
     }
 
     public static async Task MigrateUsers(PrimaryDb db, IMongoCollection<DatabaseUser> usersColl)
@@ -52,8 +53,6 @@ public static class Migrate
 
             db.Users.Add(dbUser);
         }
-
-        await db.SaveChangesAsync();
     }
 
     public static async Task MigrateLogins(PrimaryDb db, IMongoCollection<DatabaseLogin> tokensColl)
@@ -72,7 +71,6 @@ public static class Migrate
             };
             db.Logins.Add(dbLogin);
         }
-        await db.SaveChangesAsync();
     }
 
     public static async Task MigrateVideoCache(PrimaryDb db, IMongoCollection<DatabaseVideo> videoColl)
@@ -90,13 +88,13 @@ public static class Migrate
                 {
                     Id = video.Channel.Id,
                     Name = video.Channel.Name,
-                    Avatar = video.Channel.Avatars[0].Url?.ToString() ?? ""
+                    Avatar = video.Channel.Avatars[0].Url?.ToString() ?? "",
+                    Subscribers = string.Empty
                 },
                 Duration = video.Duration
             };
             db.VideoCache.Add(dbVideo);
         }
-        await db.SaveChangesAsync();
     }
 
     public static async Task MigratePlaylistCache(PrimaryDb db, IMongoCollection<DatabasePlaylist> playlistColl)
@@ -128,7 +126,6 @@ public static class Migrate
             dbPlaylist.Videos = videoIDs;
             db.Playlists.Add(dbPlaylist);
         }
-        await db.SaveChangesAsync();
     }
 
     public static async Task MigrateChannels(PrimaryDb db, IMongoCollection<DatabaseChannel> channelColl)
@@ -136,15 +133,27 @@ public static class Migrate
         IReadOnlyList<DatabaseChannel> channels = await (await channelColl.FindAsync(_ => true)).ToListAsync();
         foreach (DatabaseChannel channel in channels)
         {
-            Channel dbChannel = new()
+            Channel? channelCandidate = db.Channels.Find(channel.ChannelId);
+            if (channelCandidate is not null)
             {
-                Id = channel.ChannelId,
-                Name = channel.Name,
-                Avatar = channel.IconUrl.ToString(),
-            };
-            db.Channels.Add(dbChannel);
+                if (channelCandidate.Subscribers == string.Empty)
+                {
+                    channelCandidate.Subscribers = channel.Subscribers;
+                }
+            }
+            else
+            {
+                Channel dbChannel = new()
+                {
+                    Id = channel.ChannelId,
+                    Name = channel.Name,
+                    Avatar = channel.IconUrl.ToString(),
+                    Subscribers = channel.Subscribers
+                };
+                db.Channels.Add(dbChannel);
+            }
+
         }
-        await db.SaveChangesAsync();
     }
 
     public static async Task MigrateOAuthTokens(PrimaryDb db, IMongoCollection<DatabaseOauthToken> tokensColl)
@@ -163,6 +172,5 @@ public static class Migrate
             };
             db.OAuthTokens.Add(dbToken);
         }
-        await db.SaveChangesAsync();
     }
 }
