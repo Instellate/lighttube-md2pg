@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using Migrator;
 using Migrator.Database;
@@ -13,10 +14,10 @@ builder.AddEnvironmentVariables();
 #endif
 IConfiguration config = builder.Build();
 
-ServiceCollection collection = new();
-collection.AddDbContext<PrimaryDb>((o) => o.UseNpgsql(config["CONN_STR"]!));
-
-IServiceProvider provider = collection.BuildServiceProvider();
+IServiceProvider provider =
+	Host.CreateDefaultBuilder().ConfigureServices(collection =>
+		collection.AddDbContext<PrimaryDb>(o => o.UseNpgsql(config["MONGO_CONN_STR"]!))
+	).Build().Services;
 
 using (IServiceScope scope = provider.CreateScope())
 {
@@ -24,5 +25,5 @@ using (IServiceScope scope = provider.CreateScope())
     PrimaryDb db = provider.GetRequiredService<PrimaryDb>();
     await db.Database.MigrateAsync();
 
-    await Migrate.StartMigration(db, client.GetDatabase("Lighttube"));
+	await Migrate.StartMigration(db, client.GetDatabase("lighttube"));
 }

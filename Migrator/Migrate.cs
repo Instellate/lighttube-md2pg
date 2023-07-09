@@ -87,7 +87,7 @@ public static class Migrate
                 {
                     Id = video.Channel.Id,
                     Name = video.Channel.Name,
-                    Avatar = video.Channel.Avatars[0].Url.ToString(),
+                    Avatar = video.Channel.Avatars[0].Url?.ToString() ?? ""
                 },
                 Duration = video.Duration
             };
