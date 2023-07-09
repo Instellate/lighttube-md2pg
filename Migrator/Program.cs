@@ -20,7 +20,7 @@ IServiceProvider provider = collection.BuildServiceProvider();
 
 using (IServiceScope scope = provider.CreateScope())
 {
-    MongoClient client = new();
+    MongoClient client = new(new MongoUrl(config["MONGO_CONN_STR"]!));
     PrimaryDb db = provider.GetRequiredService<PrimaryDb>();
     await db.Database.MigrateAsync();
 

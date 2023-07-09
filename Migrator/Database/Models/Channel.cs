@@ -1,6 +1,5 @@
 namespace Migrator.Database.Models;
 
-// TODO: Subscribers
 public class Channel
 {
     public required string Id { get; set; }

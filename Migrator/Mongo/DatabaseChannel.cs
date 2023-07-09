@@ -2,7 +2,6 @@
 
 namespace Migrator.Mongo;
 
-// TODO: Subscribers
 [BsonIgnoreExtraElements]
 public class DatabaseChannel
 {
