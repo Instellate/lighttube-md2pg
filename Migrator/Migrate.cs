@@ -30,23 +30,26 @@ public static class Migrate
         IReadOnlyList<DatabaseUser> users = await (await usersColl.FindAsync(_ => true)).ToListAsync();
         foreach (DatabaseUser user in users)
         {
+            User dbUser = new()
+            {
+                Id = user.UserID,
+                PasswordHash = user.PasswordHash,
+                Subscriptions = new(),
+                LTChannelID = user.LTChannelID
+            };
+
             List<UserSubscription> subscriptions = new(user.Subscriptions.Count);
             foreach ((string key, SubscriptionType value) in user.Subscriptions)
             {
                 subscriptions.Add(new()
                 {
-                    Id = key,
+                    User = dbUser,
+                    VideoId = key,
                     Type = value
                 });
             }
+            dbUser.Subscriptions = subscriptions;
 
-            User dbUser = new()
-            {
-                Id = user.UserID,
-                PasswordHash = user.PasswordHash,
-                Subscriptions = subscriptions,
-                LTChannelID = user.LTChannelID
-            };
             db.Users.Add(dbUser);
         }
 
