@@ -5,6 +5,12 @@ namespace Migrator.Database;
 
 public class PrimaryDb : DbContext
 {
+    public PrimaryDb(DbContextOptions<PrimaryDb> options)
+        : base(options)
+    {
+
+    }
+
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<UserSubscription> UserSubscriptions { get; set; } = null!;
     public DbSet<Login> Logins { get; set; } = null!;
