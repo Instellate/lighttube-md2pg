@@ -44,7 +44,7 @@ public static class Migrate
                 subscriptions.Add(new()
                 {
                     User = dbUser,
-                    VideoId = key,
+                    ChannelId = key,
                     Type = value
                 });
             }
@@ -124,6 +124,8 @@ public static class Migrate
                     Video = (await db.VideoCache.FindAsync(id))!
                 });
             }
+
+            dbPlaylist.Videos = videoIDs;
             db.Playlists.Add(dbPlaylist);
         }
         await db.SaveChangesAsync();
@@ -157,7 +159,7 @@ public static class Migrate
                 RefreshToken = token.RefreshToken,
                 CurrentAuthToken = token.CurrentAuthToken,
                 Scopes = string.Join(' ', token.Scopes),
-                CurrentTokenExpirationDate = token.CurrentTokenExpirationDate
+                CurrentTokenExpirationDate = token.CurrentTokenExpirationDate.UtcDateTime
             };
             db.OAuthTokens.Add(dbToken);
         }
