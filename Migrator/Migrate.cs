@@ -18,6 +18,11 @@ public static class Migrate
         var oauth2TokensColl = mongo.GetCollection<DatabaseOauthToken>("oauth2Tokens");
 
         await MigrateUsers(db, usersColl);
+        await MigrateLogins(db, tokensColl);
+        await MigrateVideoCache(db, videoCacheColl);
+        await MigratePlaylistCache(db, playlistColl);
+        await MigrateChannels(db, channelCacheColl);
+        await MigrateOAuthTokens(db, oauth2TokensColl);
     }
 
     public static async Task MigrateUsers(PrimaryDb db, IMongoCollection<DatabaseUser> usersColl)
@@ -37,7 +42,7 @@ public static class Migrate
 
             User dbUser = new()
             {
-                UserId = user.UserID,
+                Id = user.UserID,
                 PasswordHash = user.PasswordHash,
                 Subscriptions = subscriptions,
                 LTChannelID = user.LTChannelID
@@ -67,4 +72,91 @@ public static class Migrate
         await db.SaveChangesAsync();
     }
 
+    public static async Task MigrateVideoCache(PrimaryDb db, IMongoCollection<DatabaseVideo> videoColl)
+    {
+        IReadOnlyList<DatabaseVideo> videos = await (await videoColl.FindAsync(_ => true)).ToListAsync();
+        foreach (DatabaseVideo video in videos)
+        {
+            VideoCache dbVideo = new()
+            {
+                Id = video.Id,
+                Title = video.Title,
+                Thumbnail = video.Thumbnails[0].Url.ToString(),
+                Views = video.Views,
+                Channel = new()
+                {
+                    Id = video.Channel.Id,
+                    Name = video.Channel.Name,
+                    Avatar = video.Channel.Avatars[0].Url.ToString(),
+                },
+                Duration = video.Duration
+            };
+            db.VideoCache.Add(dbVideo);
+        }
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task MigratePlaylistCache(PrimaryDb db, IMongoCollection<DatabasePlaylist> playlistColl)
+    {
+        IReadOnlyList<DatabasePlaylist> playlists = await (await playlistColl.FindAsync(_ => true)).ToListAsync();
+        foreach (DatabasePlaylist playlist in playlists)
+        {
+            Playlist dbPlaylist = new()
+            {
+                Id = playlist.Id,
+                Name = playlist.Name,
+                Description = playlist.Description,
+                Visibility = playlist.Visibility,
+                Videos = new(),
+                Author = (await db.Users.FindAsync(playlist.Author))!,
+                LastUpdated = playlist.LastUpdated
+            };
+
+            List<PlaylistVideoID> videoIDs = new(playlist.VideoIds.Count);
+            foreach (string id in playlist.VideoIds)
+            {
+                videoIDs.Add(new()
+                {
+                    Playlist = dbPlaylist,
+                    Video = (await db.VideoCache.FindAsync(id))!
+                });
+            }
+            db.Playlists.Add(dbPlaylist);
+        }
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task MigrateChannels(PrimaryDb db, IMongoCollection<DatabaseChannel> channelColl)
+    {
+        IReadOnlyList<DatabaseChannel> channels = await (await channelColl.FindAsync(_ => true)).ToListAsync();
+        foreach (DatabaseChannel channel in channels)
+        {
+            Channel dbChannel = new()
+            {
+                Id = channel.ChannelId,
+                Name = channel.Name,
+                Avatar = channel.IconUrl.ToString(),
+            };
+            db.Channels.Add(dbChannel);
+        }
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task MigrateOAuthTokens(PrimaryDb db, IMongoCollection<DatabaseOauthToken> tokensColl)
+    {
+        IReadOnlyList<DatabaseOauthToken> tokens = await (await tokensColl.FindAsync(_ => true)).ToListAsync();
+        foreach (DatabaseOauthToken token in tokens)
+        {
+            OAuthToken dbToken = new()
+            {
+                UserId = token.UserId,
+                ClientId = token.ClientId,
+                RefreshToken = token.RefreshToken,
+                CurrentAuthToken = token.CurrentAuthToken,
+                Scopes = string.Join(' ', token.Scopes),
+                CurrentTokenExpirationDate = token.CurrentTokenExpirationDate
+            };
+        }
+        await db.SaveChangesAsync();
+    }
 }
