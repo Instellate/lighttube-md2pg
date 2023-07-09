@@ -156,6 +156,7 @@ public static class Migrate
                 Scopes = string.Join(' ', token.Scopes),
                 CurrentTokenExpirationDate = token.CurrentTokenExpirationDate
             };
+            db.OAuthTokens.Add(dbToken);
         }
         await db.SaveChangesAsync();
     }
