@@ -78,19 +78,21 @@ public static class Migrate
         IReadOnlyList<DatabaseVideo> videos = await (await videoColl.FindAsync(_ => true)).ToListAsync();
         foreach (DatabaseVideo video in videos)
         {
+            Channel channel = db.Channels.Find(video.Channel.Id) ?? new()
+            {
+                Id = video.Channel.Id,
+                Name = video.Channel.Name,
+                Avatar = video.Channel.Avatars[0].Url?.ToString() ?? "",
+                Subscribers = string.Empty
+            };
+
             VideoCache dbVideo = new()
             {
                 Id = video.Id,
                 Title = video.Title,
                 Thumbnail = video.Thumbnails[0].Url.ToString(),
                 Views = video.Views,
-                Channel = new()
-                {
-                    Id = video.Channel.Id,
-                    Name = video.Channel.Name,
-                    Avatar = video.Channel.Avatars[0].Url?.ToString() ?? "",
-                    Subscribers = string.Empty
-                },
+                Channel = channel, 
                 Duration = video.Duration
             };
             db.VideoCache.Add(dbVideo);
@@ -152,7 +154,6 @@ public static class Migrate
                 };
                 db.Channels.Add(dbChannel);
             }
-
         }
     }
 
